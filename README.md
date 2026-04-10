@@ -278,7 +278,7 @@ Then evaluate it with:
 ```bash
 cd tools
 python3 test.py --cfg_file cfgs/models/kitti/VirConv-L.yaml \
-    --batch_size 20 \
+    --batch_size 4 \
     --ckpt ../output/models/kitti/VirConv-L/default/ckpt/final_checkpoint.pth \
     --save_to_file
 ```
