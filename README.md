@@ -1,13 +1,12 @@
 # Selective and Noise-Resistant Virtual Point Cloud Fusion for Long-Range 3D Object Detection
 
-This repository provides the **modified files** for our paper:
+This repository provides the official code release for our paper:
 
 **Selective and Noise-Resistant Virtual Point Cloud Fusion for Long-Range 3D Object Detection**
 
-Our implementation is built **on top of the official VirConv codebase**.  
-Instead of re-releasing the entire upstream framework, this repository is provided in a **patch-style form**, containing the key modified files required to reproduce our method.
+Our method builds upon the VirConv framework and introduces a selective and noise-resistant multimodal fusion design for long-range 3D object detection.
 
-The proposed framework extends VirConv with three main components:
+The proposed framework includes three main components:
 
 - **DNrC (Dilated Noise-Resistant Convolution)**: suppresses boundary-aligned artifacts in projected sparse features using 2D dilated sparse convolutions.
 - **MCMA (Multiscale Cross Multi-Head Attention)**: performs geometry-consistent cross-modal fusion with **3D features as queries** and **2D features as keys/values**.
@@ -19,26 +18,26 @@ In addition, we use **Stochastic Voxel Discard (StVD)**:
 - **Layer StVD**: random sparse voxel discard during training.
 
 > **Important**  
-> This repository contains only the **modified files** of our method rather than a full standalone reimplementation.  
-> Please first clone the official **VirConv** repository, then copy the files from this repository into the corresponding locations and overwrite the original files.
+> This repository is a **standalone code release** of our implementation.  
+> Users can clone this repository directly, install the dependencies, prepare the dataset, and then run training or evaluation.
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Modified Files](#modified-files)
+- [Repository Structure](#repository-structure)
+- [Main Implementation Changes](#main-implementation-changes)
 - [Environment](#environment)
 - [Installation](#installation)
-- [How to Apply This Repository on Top of VirConv](#how-to-apply-this-repository-on-top-of-virconv)
 - [Dataset Preparation](#dataset-preparation)
 - [Optional: Generate Virtual Points with PENet](#optional-generate-virtual-points-with-penet)
 - [Build](#build)
 - [Pretrained Model](#pretrained-model)
 - [Training](#training)
 - [Evaluation](#evaluation)
+- [Distance-wise Evaluation](#distance-wise-evaluation)
 - [TensorBoard](#tensorboard)
-- [Visualization](#visualization)
 - [Selected Results](#selected-results)
 - [FAQ](#faq)
 - [Acknowledgements](#acknowledgements)
@@ -61,48 +60,49 @@ Our implementation follows the setting in which **depth completion is performed 
 
 ---
 
-## Modified Files
-
-The core modifications follow the original VirConv structure.
+## Repository Structure
 
 ```text
-VirConv/
+SANR-3D/
+├── pcdet/
 ├── tools/
+│   ├── PENet/
+│   ├── cfgs/
+│   ├── eval_utils/
+│   ├── train_utils/
 │   ├── train.py
 │   ├── test.py
-│   └── cfgs/models/kitti/VirConv-L.yaml
-├── pcdet/
-│   ├── datasets/
-│   │   ├── dataset.py
-│   │   └── kitti/kitti_dataset_mm.py
-│   └── models/
-│       ├── backbones_3d/spconv_backbone.py
-│       └── roi_heads/ted_head.py
-└── tools/PENet/dataloaders/my_loader.py   # optional
+│   └── eval_by_distance.py
+├── requirements.txt
+└── setup.py
 ```
 
-### Main implementation changes
+---
+
+## Main Implementation Changes
+
+The core files corresponding to our method are:
 
 - **`pcdet/datasets/dataset.py`**
-  - Implements **input-stage stochastic voxel discard (Input StVD)** with distance-aware sampling to reduce redundant computation in dense near-range virtual points while preserving informative long-range structure.
+  - Implements **input-stage stochastic voxel discard (Input StVD)** with distance-aware sampling.
 
 - **`pcdet/datasets/kitti/kitti_dataset_mm.py`**
   - Provides **KITTI multimodal dataset loading** and multimodal info generation for fused LiDAR and virtual point cloud inputs.
 
 - **`pcdet/models/backbones_3d/spconv_backbone.py`**
-  - Implements the core backbone modifications, including:
+  - Implements the backbone modifications, including:
     - **DNrC (Dilated Noise-Resistant Convolution)**
     - **MCMA (Multiscale Cross Multi-Head Attention)**
     - **layer-level stochastic voxel discard (Layer StVD)**
 
 - **`pcdet/models/roi_heads/ted_head.py`**
-  - Implements the detection head with **CasA-based cascaded refinement** for improved long-range localization.
+  - Implements the detection head with cascaded RoI refinement.
 
 - **`tools/train.py`, `tools/test.py`**
   - Training and evaluation entry points used in our experiments.
 
 - **`tools/cfgs/models/kitti/VirConv-L.yaml`**
-  - Configuration file for the experimental setting used in our paper.
+  - Main experiment configuration used in our paper.
 
 - **`tools/PENet/dataloaders/my_loader.py`**
   - Optional preprocessing utilities for the PENet-based virtual point generation pipeline.
@@ -148,55 +148,20 @@ pip install numpy==1.19.5 protobuf==3.19.4 scikit-image==0.19.2 \
     prefetch-generator
 ```
 
-Optional visualization packages:
+Then install the project in development mode:
 
 ```bash
-pip install vedo==2021.0.6 vtk==9.0.3
+python setup.py develop
 ```
-
----
-
-## How to Apply This Repository on Top of VirConv
-
-### Step 1. Clone the official VirConv repository
-
-```bash
-git clone https://github.com/hailanyi/VirConv.git
-cd VirConv
-```
-
-### Step 2. Copy this repository's files into the VirConv root
-
-Copy and overwrite the following files:
-
-```text
-tools/train.py
-tools/test.py
-tools/cfgs/models/kitti/VirConv-L.yaml
-
-pcdet/datasets/dataset.py
-pcdet/datasets/kitti/kitti_dataset_mm.py
-
-pcdet/models/backbones_3d/spconv_backbone.py
-pcdet/models/roi_heads/ted_head.py
-
-tools/PENet/dataloaders/my_loader.py   # optional
-```
-
-### Step 3. Continue using the VirConv root directory
-
-All commands in this README assume that you are working under the **VirConv root directory** after overwriting the files above.
-
-> You may rename `VirConv-L.yaml` to another name such as `SANR-3D.yaml`, but please update the training and evaluation commands accordingly.
 
 ---
 
 ## Dataset Preparation
 
-Please prepare the **official KITTI 3D Object Detection** dataset in the standard VirConv layout:
+Please prepare the **official KITTI 3D Object Detection** dataset in the following layout:
 
 ```text
-VirConv/
+SANR-3D/
 ├── data/
 │   ├── kitti/
 │   │   ├── ImageSets/
@@ -220,9 +185,7 @@ VirConv/
 │   │   └── kitti_infos_test.pkl
 ```
 
-### Generate KITTI info files
-
-After the dataset is prepared, generate the info files:
+Generate KITTI info files with:
 
 ```bash
 python3 -m pcdet.datasets.kitti.kitti_dataset_mm create_kitti_infos \
@@ -233,7 +196,7 @@ python3 -m pcdet.datasets.kitti.kitti_dataset_mm create_kitti_infos \
 
 ## Optional: Generate Virtual Points with PENet
 
-If you want to regenerate the virtual point clouds, follow the upstream VirConv/PENet pipeline.
+If you want to regenerate the virtual point clouds, you can use the included PENet pipeline.
 
 Example:
 
@@ -251,7 +214,7 @@ This should generate the `velodyne_depth` folders used by the multimodal detecto
 
 ## Build
 
-After replacing the files, build the project in development mode:
+After installing the dependencies, build the project in development mode:
 
 ```bash
 python setup.py develop
@@ -270,7 +233,7 @@ We also provide a pretrained checkpoint for convenience:
 Place the downloaded checkpoint under:
 
 ```text
-VirConv/output/models/kitti/VirConv-L/default/ckpt/
+output/models/kitti/VirConv-L/default/ckpt/
 ```
 
 Then evaluate it with:
@@ -300,7 +263,12 @@ python3 train.py --cfg_file cfgs/models/kitti/VirConv-L.yaml
 
 ### Multi-GPU training
 
-You may use the original VirConv distributed training scripts if needed.
+You may use the provided distributed training scripts if needed:
+
+```bash
+cd tools
+bash dist_train.sh
+```
 
 ---
 
@@ -327,6 +295,19 @@ python3 test.py --cfg_file cfgs/models/kitti/VirConv-L.yaml \
 
 ---
 
+## Distance-wise Evaluation
+
+You may also evaluate distance-binned performance with:
+
+```bash
+cd tools
+python3 eval_by_distance.py
+```
+
+Please edit the dataset and prediction paths inside the script if needed.
+
+---
+
 ## TensorBoard
 
 ```bash
@@ -336,24 +317,6 @@ tensorboard --logdir=./output/models/kitti/VirConv-L/default/tensorboard/
 # Evaluation logs
 tensorboard --logdir=./output/models/kitti/VirConv-L/default/eval/eval_with_train/tensorboard_val
 ```
-
----
-
-## Visualization
-
-If you also include the visualization scripts, you may use them as follows:
-
-```bash
-cd 3d-Detection-Tracking-Viewer
-
-# LiDAR-only visualization
-python GT_all_point_view.py
-
-# LiDAR + virtual point cloud visualization
-python Own_all_point_view.py
-```
-
-Please edit the dataset paths inside the scripts before running them.
 
 ---
 
@@ -374,7 +337,7 @@ Please edit the dataset paths inside the scripts before running them.
 |---------|--------|---------|---------|-------|
 | Gain    | +2.25  | +2.57   | +5.64   | +2.70 |
 
-> In our experiments, inserting MCMA at Stage 3/4 provided the best accuracy-efficiency trade-off. DNrC improved robustness to boundary-induced noise, while CasA further strengthened long-range localization with modest overhead.
+> In our experiments, inserting MCMA at Stage 3/4 provided the best accuracy-efficiency trade-off. DNrC improved robustness to boundary-induced noise, while cascaded RoI refinement further strengthened long-range localization with modest overhead.
 
 ---
 
@@ -390,7 +353,7 @@ Dense virtual points can significantly increase computation, especially in near-
 
 ### Why can far-range AP sometimes be unstable?
 
-At extreme distance, valid detections may sometimes be penalized by incomplete annotations. Qualitative visualization is often helpful for interpreting such cases.
+At extreme distance, valid detections may sometimes be penalized by incomplete annotations. Qualitative inspection is often helpful for interpreting such cases.
 
 ---
 
